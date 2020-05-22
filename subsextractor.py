@@ -104,3 +104,16 @@ def tesseract_recognition(video_path, lang = 'eng'):
     # changing time to be in pairs 
     time_paired = [(time[i],time[i+1]) for i in range(0,len(time),2)]
     return ans,time_paired
+
+def save_srt(name,text,time):
+    # checking data
+    if len(text) != len(time):
+        return "Error: subtitle text and time is different size"
+    # creating file and writing data to it in srt format
+    f = open(f"{name}.srt", "w")    
+    for i in range(len(text)):
+        f.write(str(i+1)+'\n')
+        f.write(f"{time[i][0]} --> {time[i][1]}\n")
+        f.write(text[i]+'\n')
+        f.write('\n')
+    f.close()
