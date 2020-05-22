@@ -24,7 +24,15 @@ def thrimg_text_cls(thr_img,min_thresh = 200, max_thresh = 2000,min_cc_number = 
     dispersion_thr = thr_img.shape[0]/10
     return np.std(centroids[valid_idx][:,1]) < dispersion_thr and len(valid_idx[0]) >= min_cc_number
 
-def tesseract_recognition(video_path):
+def timestamp(frame_num,fps):
+    s = frame_num / fps
+    s,ms = divmod(s, 1)
+    ms = int(ms * 1000) # because ms was a procent of a second
+    m,s = divmod(s,60)
+    h,m = divmod(m,60)
+    return "{:02d}:{:02d}:{:02d},{:03d}".format(int(h),int(m),int(s),int(ms))
+
+def tesseract_recognition(video_path, lang = 'eng'):
     # Checking classification
     ## Minimum time for subs is 0.5 seconds
     
@@ -41,7 +49,9 @@ def tesseract_recognition(video_path):
     if ret == False:
         return "Error: error while reading frame"
         
-    ans = []
+    text = []
+    time = []
+    part_with_text = False # used for correct timing
     old_thr = thresher(frame)
     previous_clean = np.zeros((1080,1920),np.uint8)
     for frame_num in tqdm(range(1,total_frames)):
@@ -67,14 +77,30 @@ def tesseract_recognition(video_path):
         cv2.floodFill(flood_img,mask,zero_pos,255)
         # inverting
         clean = cv2.bitwise_not(flood_img)
-        clf = thrimg_text_cls(clean)
+        # checking for text
+        clf = thrimg_text_cls(clean,min_thresh=Min_thresh,max_thresh=Max_thresh,min_cc_number=Min_cc_number)
         if clf:
+            # comparing with previous frame to check if different and needs to be saved
             if np.count_nonzero(clean & previous_clean) < 0.6 * np.count_nonzero(clean):
-                ans.append(image_to_string(flood_img,lang='rus'))
+                ans.append(image_to_string(flood_img,lang=lang))
                 previous_clean = clean
+                if part_with_text:
+                    time.append(timestamp(frame_num,fps))
+                    time.append(timestamp(frame_num,fps)) #because it's beginning of new subtitle line
+                else:
+                    time.append(timestamp(frame_num,fps))
+                    part_with_text = True
+                
         else:
+            # ending text part and refreshing previous text frame
             previous_clean = np.zeros((1080,1920),np.uint8)
+            if part_with_text:
+                time.append(timestamp(frame_num,fps))
+                part_with_text = False
     
     cap.release()
     cv2.destroyAllWindows()
-    return ans
+    
+    # changing time to be in pairs 
+    time_paired = [(time[i],time[i+1]) for i in range(0,len(time),2)]
+    return ans,time_paired
