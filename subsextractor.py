@@ -37,7 +37,7 @@ class subtitle_extractor:
         h,m = divmod(m,60)
         return "{:02d}:{:02d}:{:02d},{:03d}".format(int(h),int(m),int(s),int(ms))
 
-    def tesseract_recognition(self,video_path, lang = 'eng',percent_to_recog = 1.0):
+    def tesseract_recognition(self,video_path, lang = 'eng',percent_to_recog = 1.0,min_size = 200,max_size = 3000):
         # Checking classification
         ## Minimum time for subs is 0.5 seconds
 
@@ -83,7 +83,7 @@ class subtitle_extractor:
             # inverting
             clean = cv2.bitwise_not(flood_img)
             # checking for text
-            clf = self.thrimg_text_cls(clean,min_thresh=200,max_thresh=3000,min_cc_number=5)
+            clf = self.thrimg_text_cls(clean,min_thresh=min_size,max_thresh=max_size,min_cc_number=5)
             if clf:
                 # comparing with previous frame to check if different and needs to be saved
                 if np.count_nonzero(clean & previous_clean) < 0.6 * np.count_nonzero(clean):
